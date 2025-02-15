@@ -47,7 +47,7 @@
 pub mod anthropic;
 pub mod azure;
 pub mod cohere;
-pub mod deepseek;
+
 pub mod galadriel;
 pub mod gemini;
 pub mod groq;
@@ -56,3 +56,4 @@ pub mod moonshot;
 pub mod openai;
 pub mod perplexity;
 pub mod xai;
+pub mod deepseek;
