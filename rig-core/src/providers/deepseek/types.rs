@@ -1,8 +1,9 @@
+use crate::completion::{CompletionError, MessageError};
+use crate::{completion, message, one_or_many::string_or_one_or_many, OneOrMany};
+use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 use std::str::FromStr;
-use serde::{Deserialize, Serialize};
-use crate::{completion, message, OneOrMany};
-use crate::completion::{CompletionError, MessageError};
+
 #[derive(Debug, Deserialize)]
 pub struct CompletionResponse {
     pub content: Vec<Content>,
@@ -318,11 +319,11 @@ impl TryFrom<message::Message> for Message {
                         })
                     }
                     message::UserContent::Image(message::Image {
-                                                    data,
-                                                    format,
-                                                    media_type,
-                                                    ..
-                                                }) => {
+                        data,
+                        format,
+                        media_type,
+                        ..
+                    }) => {
                         let source = ImageSource {
                             data,
                             media_type: match media_type {
@@ -389,10 +390,10 @@ impl From<ToolResultContent> for message::ToolResultContent {
         match content {
             ToolResultContent::Text { text } => message::ToolResultContent::text(text),
             ToolResultContent::Image(ImageSource {
-                                         data,
-                                         media_type: format,
-                                         r#type,
-                                     }) => message::ToolResultContent::image(
+                data,
+                media_type: format,
+                r#type,
+            }) => message::ToolResultContent::image(
                 data,
                 Some(r#type.into()),
                 Some(format.into()),
