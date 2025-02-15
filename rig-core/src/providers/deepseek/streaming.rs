@@ -2,14 +2,12 @@ use async_stream::stream;
 use futures::StreamExt;
 use serde::Deserialize;
 use serde_json::json;
-
-
+use crate::{completion, OneOrMany};
 use crate::completion::{CompletionError, CompletionRequest};
 use crate::json_utils::merge_inplace;
 use crate::message::MessageError;
-
 use crate::providers::deepseek::client::{DeepSeekCompletionModel, Message};
-use crate::providers::deepseek::types::{Content, ToolChoice, ToolDefinition, Usage};
+use crate::providers::deepseek::types::{CompletionResponse, Content, ToolChoice, ToolDefinition, Usage};
 use crate::streaming::{StreamingChoice, StreamingCompletionModel, StreamingResult};
 
 #[derive(Debug, Deserialize)]
@@ -66,6 +64,41 @@ struct ToolCallState {
     name: String,
     id: String,
     input_json: String,
+}
+
+impl TryFrom<CompletionResponse> for completion::CompletionResponse<CompletionResponse> {
+    type Error = CompletionError;
+
+    fn try_from(response: CompletionResponse) -> Result<Self, Self::Error> {
+        let content = response
+            .content
+            .iter()
+            .map(|content| {
+                Ok(match content {
+                    crate::providers::anthropic::completion::Content::Text { text } => completion::AssistantContent::text(text),
+                    crate::providers::anthropic::completion::Content::ToolUse { id, name, input } => {
+                        completion::AssistantContent::tool_call(id, name, input.clone())
+                    }
+                    _ => {
+                        return Err(CompletionError::ResponseError(
+                            "Response did not contain a message or tool call".into(),
+                        ))
+                    }
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let choice = OneOrMany::many(content).map_err(|_| {
+            CompletionError::ResponseError(
+                "Response contained no message or tool call (empty)".to_owned(),
+            )
+        })?;
+
+        Ok(completion::CompletionResponse {
+            choice,
+            raw_response: response,
+        })
+    }
 }
 
 impl StreamingCompletionModel for DeepSeekCompletionModel {
